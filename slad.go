@@ -192,17 +192,15 @@ func main() {
 	flag.Parse()
 
 	timeLimit := 5 * time.Millisecond
-
 	done := make(chan bool)
-
 	resultPing := map[string][]time.Duration{}
 
 	go ping(*URL, resultPing, done)
-	round := IPLookup(*URL)
-	fmt.Println("round", round)
 
+	IPs := IPLookup(*URL)
 	resultLatency := map[string]chan []time.Duration{}
-	for _, ip := range round {
+
+	for _, ip := range IPs {
 		resultLatency[ip] = make(chan []time.Duration)
 		go Routine(*URL, ip, *port, resultLatency[ip])
 	}
@@ -216,19 +214,19 @@ func main() {
 		latencyTrip99[ip] = r[int(percentile)]
 	}
 
-	roundTrip99 := map[string]time.Duration{}
+	pingTrip99 := map[string]time.Duration{}
 	for adds, rt := range resultPing {
 		sort.Sort(ByDuration(rt))
 		percentile := float64(99) / float64(100) * float64(len(rt))
-		roundTrip99[adds] = rt[int(percentile)]
+		pingTrip99[adds] = rt[int(percentile)]
 	}
 
 	percentile75 := []time.Duration{}
-	for addres, val1 := range roundTrip99 {
-		if val2, ok := latencyTrip99[addres]; ok {
-			timeLatency := val2 - val1
+	for addres, t1 := range pingTrip99 {
+		if t2, ok := latencyTrip99[addres]; ok {
+			timeLatency := t2 - t1
 			percentile75 = append(percentile75, timeLatency)
-			fmt.Println("address", "value", addres, timeLatency)
+			fmt.Println("address", "latency", addres, timeLatency)
 		}
 	}
 	sort.Sort(ByDuration(percentile75))
